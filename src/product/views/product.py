@@ -1,11 +1,14 @@
+import json
+
 from django.db.models import Prefetch, Q, QuerySet
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.views import generic
 from django.views.generic import ListView, CreateView, UpdateView
-from ..models import Variant, Product, ProductVariantPrice, ProductVariant
+from ..models import Variant, Product, ProductVariantPrice, ProductVariant, ProductImage
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import datetime
+from django.views.decorators.csrf import csrf_exempt
 
 
 class CreateProductView(generic.TemplateView):
@@ -129,8 +132,55 @@ def product_view(request):
                       context={'product_list': p_product_list, 'variants': select_variants})
 
 
+@csrf_exempt
 def save_product(request):
     if request.method == "POST":
-        response = HttpResponse("Here's the text of the web page.")
-        print('hello')
+        d = request.body
+        data = json.loads(d.decode('utf-8'))
+        if not Product.objects.filter(title__exact=data['title'], sku__exact=data['sku'], description__exact=data['description']).exists():
+            product_object = Product()
+            product_object.title = data['title']
+            product_object.sku = data['sku']
+            product_object.description = data['description']
+            product_object.save()
+        else:
+            product_object = Product.objects.filter(title__exact=data['title'], sku__exact=data['sku'], description__exact=data['description']).first()
+        if not ProductImage.objects.filter(product=product_object).exists():
+            product_image_object = ProductImage()
+            product_image_object.product = product_object
+            product_image_object.file_path = data['product_image']
+        variant_dict = {}
+        for item in data['product_variant']:
+            if item['option'] == 1:
+                option = Variant.objects.get(title__exact='Size')
+            elif item['option'] == 2:
+                option = Variant.objects.get(title__exact='Color')
+            elif item['option'] == 3:
+                option = Variant.objects.get(title__exact='Style')
+            for tag in item['tags']:
+                if not ProductVariant.objects.filter(variant_title__icontains=tag, product=product_object, variant=option).exists():
+                    product_variant_object = ProductVariant()
+                    product_variant_object.variant_title = tag
+                    product_variant_object.product = product_object
+                    product_variant_object.variant = option
+                    product_variant_object.save()
+                else:
+                    product_variant_object = ProductVariant.objects.filter(variant_title__icontains=tag, product=product_object, variant=option).first()
+                variant_dict[tag] = product_variant_object
+        for pvp in data['product_variant_prices']:
+            tags = str(pvp['title']).split('/')
+            # print(tags)
+            tag1 = tags[0]
+            tag2 = tags[1]
+            tag3 = tags[2]
+            product_variant_price_object = ProductVariantPrice()
+            product_variant_price_object.product_variant_one = variant_dict[tag1]
+            product_variant_price_object.product_variant_two = variant_dict[tag2]
+            product_variant_price_object.product_variant_three = variant_dict[tag3]
+            product_variant_price_object.product = product_object
+            product_variant_price_object.price = pvp['price']
+            product_variant_price_object.stock = pvp['stock']
+            product_variant_price_object.save()
+
+        response = HttpResponse("Successfully Data Added!")
         return response
