@@ -10,7 +10,8 @@
 
 
 <div class="card">
-    <form action="" method="get" class="card-header">
+    <form action="{% url 'product:list.product' %}" method="post" class="card-header">
+    {% csrf_token %}
         <div class="form-row justify-content-between">
             <div class="col-md-2">
                 <input type="text" name="title" placeholder="Product Title" class="form-control">
@@ -18,6 +19,15 @@
             <div class="col-md-2">
                 <select name="variant" id="" class="form-control">
                     <option selected disabled>--Select A Variant--</option>
+                    {% for key, values in variants.items %}
+                    <optgroup label="{{ key }}">
+                    {% for value in values %}
+                      <option value="{{ value }}">{{ value }}</option>
+                    {% endfor %}
+                    </optgroup>
+
+                    {% endfor %}
+
 
                 </select>
             </div>
@@ -55,50 +65,53 @@
                 </thead>
 
                 <tbody>
+                {% for product in product_list %}
                 <tr>
-                    <td>1</td>
-                    <td>T-Shirt <br> Created at : 25-Aug-2020</td>
-                    <td>Quality product in low cost</td>
+                    <td>{{ product.id }}</td>
+                    <td>{{ product.title }} <br> Created at : {{ product.created_at }}</td>
+                    <td>{{ product.description}}</td>
                     <td>
-                        <dl class="row mb-0" style="height: 80px; overflow: hidden" id="variant">
+                        <dl class="row mb-0" style="height: 80px; overflow: hidden" id="variant{{ product.id }}">
+                            {% for variant in product.variants_list %}
                                 <dt class="col-sm-3 pb-0">
-                                    XL/ Black/ Full
+                                    {{ variant.variant }}
                                 </dt>
                                 <dd class="col-sm-9">
                                     <dl class="row mb-0">
-                                        <dd class="col-sm-4 pb-0">Price : 200.0</dd>
-                                        <dd class="col-sm-8 pb-0">InStock : 50.</dd>
+                                        <dd class="col-sm-4 pb-0">Price : {{ variant.price }}</dd>
+                                        <dd class="col-sm-8 pb-0">InStock : {{ variant.in_stock }}</dd>
                                     </dl>
                                 </dd>
-                                <dt class="col-sm-3 pb-0">
-                                    XL/ Black/ Half
-                                </dt>
-                                <dd class="col-sm-9">
-                                    <dl class="row mb-0">
-                                        <dd class="col-sm-4 pb-0">Price : 200.0</dd>
-                                        <dd class="col-sm-8 pb-0">InStock : 50.</dd>
-                                    </dl>
-                                </dd>
-                                <dt class="col-sm-3 pb-0">
-                                    L/ Black/ Full
-                                </dt>
-                                <dd class="col-sm-9">
-                                    <dl class="row mb-0">
-                                        <dd class="col-sm-4 pb-0">Price : 200.0</dd>
-                                        <dd class="col-sm-8 pb-0">InStock : 50.</dd>
-                                    </dl>
-                                </dd>
-                                <dt class="col-sm-3 pb-0">
-                                    L/ Black/ Half
-                                </dt>
-                                <dd class="col-sm-9">
-                                    <dl class="row mb-0">
-                                        <dd class="col-sm-4 pb-0">Price : 200.0</dd>
-                                        <dd class="col-sm-8 pb-0">InStock : 50.</dd>
-                                    </dl>
-                                </dd>
+                                {% endfor %}
+{#                                <dt class="col-sm-3 pb-0">#}
+{#                                    XL/ Black/ Half#}
+{#                                </dt>#}
+{#                                <dd class="col-sm-9">#}
+{#                                    <dl class="row mb-0">#}
+{#                                        <dd class="col-sm-4 pb-0">Price : 200.0</dd>#}
+{#                                        <dd class="col-sm-8 pb-0">InStock : 50.</dd>#}
+{#                                    </dl>#}
+{#                                </dd>#}
+{#                                <dt class="col-sm-3 pb-0">#}
+{#                                    L/ Black/ Full#}
+{#                                </dt>#}
+{#                                <dd class="col-sm-9">#}
+{#                                    <dl class="row mb-0">#}
+{#                                        <dd class="col-sm-4 pb-0">Price : 200.0</dd>#}
+{#                                        <dd class="col-sm-8 pb-0">InStock : 50.</dd>#}
+{#                                    </dl>#}
+{#                                </dd>#}
+{#                                <dt class="col-sm-3 pb-0">#}
+{#                                    L/ Black/ Half#}
+{#                                </dt>#}
+{#                                <dd class="col-sm-9">#}
+{#                                    <dl class="row mb-0">#}
+{#                                        <dd class="col-sm-4 pb-0">Price : 200.0</dd>#}
+{#                                        <dd class="col-sm-8 pb-0">InStock : 50.</dd>#}
+{#                                    </dl>#}
+{#                                </dd>#}
                             </dl>
-                        <button onclick="$('#variant').toggleClass('h-auto')" class="btn btn-sm btn-link">Show more
+                        <button onclick="$('#variant{{ product.id }}').toggleClass('h-auto')" class="btn btn-sm btn-link">Show more
                         </button>
                     </td>
                     <td>
@@ -106,7 +119,9 @@
                             <a href="" class="btn btn-success">Edit</a>
                         </div>
                     </td>
+
                 </tr>
+                {% endfor %}
                 </tbody>
 
             </table>
@@ -117,11 +132,31 @@
     <div class="card-footer">
         <div class="row justify-content-between">
             <div class="col-md-6">
-                <p>Showing 1 to 10 out of 100</p>
+                <p>Showing {{ product_list.start_index }} to {{ product_list.end_index }} out of {{ product_list.paginator.count }}</p>
             </div>
-            <div class="col-md-2">
-
+            {% if product_list.has_other_pages %}
+            <div class="col-md-4">
+                <div style=" display: inline-block;">
+                {% if product_list.has_previous %}
+                  <a style="color: black;float: left;padding: 8px 16px;text-decoration: none;" href="?page={{ product_list.previous_page_number }}" >&laquo;</a>
+                {% else %}
+                    <a style="color: black;float: left;padding: 8px 16px;text-decoration: none;" class="disabled" >&laquo;</a>
+                {% endif %}
+                {% for i in product_list.paginator.page_range %}
+                  {% if product_list.number == i %}
+                      <a class="active" style="color: black;float: left;padding: 8px 16px;text-decoration: none;" >{{ i }}</a>
+                  {% else %}
+                      <a style="color: black;float: left;padding: 8px 16px;text-decoration: none;" href="?page={{ i }}">{{ i }}</a>
+                  {% endif %}
+                {% endfor %}
+                    {% if product_list.has_next %}
+                    <a style="color: black;float: left;padding: 8px 16px;text-decoration: none;" href="?page={{ product_list.next_page_number }}">&raquo;</a>
+                    {% else %}
+                    <a style="color: black;float: left;padding: 8px 16px;text-decoration: none;" class="disabled">&raquo;</a>
+                    {% endif %}
+                </div>
             </div>
+        {% endif %}
         </div>
     </div>
 </div>

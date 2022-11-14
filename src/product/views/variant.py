@@ -1,8 +1,8 @@
 from django.views import generic
 from django.views.generic import ListView, CreateView, UpdateView
 
-from product.forms import VariantForm
-from product.models import Variant
+from ..forms import VariantForm
+from ..models import Variant
 
 
 class BaseVariantView(generic.View):
@@ -14,7 +14,7 @@ class BaseVariantView(generic.View):
 
 class VariantView(BaseVariantView, ListView):
     template_name = 'variants/list.html'
-    paginate_by = 10
+    paginate_by = 1
 
     def get_queryset(self):
         filter_string = {}
